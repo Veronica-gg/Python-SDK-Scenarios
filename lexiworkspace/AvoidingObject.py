@@ -37,9 +37,11 @@ def handle_time_of_flight(event_data):
     
     # Set a threshold distance (in meters)
     threshold_distance = 0.5
+
     if sensor_id in ['toffc', 'toffr', 'toffl'] and distance < threshold_distance and not picture_taken:  # Check for Center Front sensor
         # Stop Misty
         misty.Stop()
+        misty.MoveHead(30,0,0,100)
         picture_taken = True
         print(f"Sensor: {sensor_id}, Distance: {distance} meters")
 
@@ -57,6 +59,13 @@ def handle_time_of_flight(event_data):
                     results = model(img_path)
                     results.print()
                     results.show()
+                    detections = results.pandas().xyxy[0]
+                    for index, row in detections.iterrows():
+                        label = row['name']
+                        confidence = row['confidence']
+                        print(f"Label: {label}, Confidence: {confidence}")
+                        misty.Speak(label)
+                        misty.Speak(f"Confidence level is {confidence:.2f}")
                 else:
                     print("Failed to load the saved image.")
             else:
@@ -80,7 +89,7 @@ if __name__ == "__main__":
     misty.ChangeLED(255, 255, 255)
     misty.DisplayImage("e_Admiration.jpg")
     # Misty's head goes to a default
-    # misty.MoveHead(0, 0, 0, 100)
+    misty.MoveHead(0, 0, 0, 100)
     time.sleep(1)
 
     misty.RegisterEvent("TimeOfFlight", Events.TimeOfFlight, debounce=1000, keep_alive=True, callback_function=handle_time_of_flight)
