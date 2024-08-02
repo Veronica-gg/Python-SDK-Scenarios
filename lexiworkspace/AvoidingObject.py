@@ -36,7 +36,7 @@ def handle_time_of_flight(event_data):
     sensor_id = event_data['message']['sensorId']
     
     # Set a threshold distance (in meters)
-    threshold_distance = 0.5
+    threshold_distance = 0.4
 
     if sensor_id in ['toffc', 'toffr', 'toffl'] and distance < threshold_distance and not picture_taken:  # Check for Center Front sensor
         # Stop Misty
@@ -46,6 +46,7 @@ def handle_time_of_flight(event_data):
         print(f"Sensor: {sensor_id}, Distance: {distance} meters")
 
         # Take a picture with Misty
+        time.sleep(1)
         take_picture_response = misty.TakePicture(base64=True, fileName="misty_image.jpg", width=640, height=480, displayOnScreen=True, overwriteExisting=True)
         if take_picture_response.status_code == 200:
             print("Picture taken successfully!")
@@ -64,8 +65,11 @@ def handle_time_of_flight(event_data):
                         label = row['name']
                         confidence = row['confidence']
                         print(f"Label: {label}, Confidence: {confidence}")
-                        misty.Speak(label)
-                        misty.Speak(f"Confidence level is {confidence:.2f}")
+                        if label == "cup":
+                            misty.Speak(label)
+                            misty.Speak(f"Confidence level is {confidence:.2f}")
+                            if confidence < 0.8:
+                                move_around()
                 else:
                     print("Failed to load the saved image.")
             else:
@@ -84,6 +88,34 @@ def move_misty():
         time.sleep(1)
         misty.MoveArms(50, 50)
 
+def move_around():
+    misty.DriveArc(90, 0, 3000)
+    misty.DriveTrack(leftTrackSpeed=100, rightTrackSpeed=0)
+    time.sleep(1)
+    misty.DriveTime(30,0,1000)
+    time.sleep(1)
+    misty.stop()
+    misty.DriveTime(30,0,1000)
+    misty.DriveArc(90, 14, 3000)
+    misty.DriveTrack(leftTrackSpeed= 0,rightTrackSpeed= 100)
+    time.sleep(1)
+    misty.DriveTime(30,0,1000)
+    time.sleep(1)
+    misty.stop()
+    misty.DriveTime(30,0,1000)
+    misty.DriveArc(-30, 6, 3000)
+    misty.DriveTrack(leftTrackSpeed= 0,rightTrackSpeed= 100)
+    time.sleep(1)
+    misty.DriveTime(30,0,1000)
+    time.sleep(1)
+    misty.stop()
+    misty.DriveTime(30,0,1000)
+    time.sleep(1)
+    misty.DriveArc(-90, 14, 3000)
+    misty.DriveTrack(leftTrackSpeed= 0,rightTrackSpeed= 100)
+    time.sleep(1)
+    misty.driveTime(30,0,4000)
+    
 if __name__ == "__main__":
     misty = Robot('192.168.0.41')
     misty.ChangeLED(255, 255, 255)
