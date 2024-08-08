@@ -80,6 +80,7 @@ def handle_time_of_flight(event_data):
         if detect_object(results):
             move_around()
 
+#this is misty initially moving
 def move_misty():
     misty.MoveArms(50, 50)
     time.sleep(1)
@@ -91,45 +92,43 @@ def move_misty():
         time.sleep(1)
         misty.MoveArms(50, 50)
 
+#misty moves around the cup
 def move_around():
+    #this is so that misty won't continuously take pictures and keep being called in the detect_object function
     global picture_taken, moving_around
     if moving_around:
         return
     moving_around = True
-    
+    #misty turns right
     misty.DriveTime(linearVelocity=40, angularVelocity=-100, timeMs=4000, degree=90)
     time.sleep(3)
+    #misty drives forward
     misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1500)
     time.sleep(3)
+    #misty turns left
     misty.DriveTime(linearVelocity=20, angularVelocity=100, timeMs=4000, degree=90)
     time.sleep(3)
+    #misty moves forward
     misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1000)
     time.sleep(1)
+    #misty moves head to left
     misty.MoveHead(30, 0, 80, 100)
     time.sleep(1)
     results = take_image()
     detect_object(results)  # Only detect object but do not move again
     
     time.sleep(2)
+    #misty moves forward
     misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1000)
     time.sleep(3)
+    #misty turns left
     misty.DriveTime(linearVelocity=15, angularVelocity=100, timeMs=3000, degree=90)
     time.sleep(3)
+    #misty moves forward
     misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1500)
     time.sleep(1)
     results = take_image()
     detect_object(results)
-
-    # moving_around = False
-    # picture_taken = False
-
-    
-    # misty.Speak(confidence)
-    # if confidence < 0.6:
-    #     misty.Speak("I don't know this object")
-    # else:
-    #     misty.Speak(f'I know this object its a {label}')
-
 
 
 if __name__ == "__main__":
