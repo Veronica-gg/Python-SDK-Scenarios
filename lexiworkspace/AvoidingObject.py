@@ -19,6 +19,8 @@ import threading
 # Global flags
 picture_taken = False
 moving_around = False
+picture_count = 0
+stop_misty_movement = False  # Flag to stop the move_misty thread
 
 # Load the YOLOv5 model
 model = torch.hub.load('ultralytics/yolov5', 'custom', path='yolov5s.pt')
@@ -32,6 +34,7 @@ def save_image(image_data, file_name):
     image.save(file_name)
 
 def take_image():
+    global picture_count
     time.sleep(1)
     take_picture_response = misty.TakePicture(base64=True, fileName="misty_image.jpg", width=640, height=480, displayOnScreen=True, overwriteExisting=True)
     if take_picture_response.status_code == 200:
@@ -43,6 +46,8 @@ def take_image():
             img_path = 'captured_image.jpg'  # Replace with the path to your image
             img = cv2.imread(img_path)
             if img is not None:
+                picture_count+=1 
+                print(picture_count)
                 return model(img_path)
     return None
 
@@ -55,16 +60,27 @@ def detect_object(results):
             label = row['name']
             confidence = row['confidence']
             print(f"Label: {label}, Confidence: {confidence}")
-            if label == "cup" and confidence < 0.8:
-                misty.Speak(f'Cup, confidence level is {confidence:.2f}')
+
+            if picture_count == 1:
+                if confidence < 0.65:
+                    misty.Speak(text = "Woah! What is that?", pitch = 2)
+                    return True
+            elif picture_count == 2:
+                if confidence < 0.65:
+                    misty.Speak(text = "I still don't know what this is.", pitch = 1)
+                    return True
+            elif picture_count == 3:
+                if confidence >= 0.65:
+                    misty.Speak("Oh, it's a cup")
+                else:
+                    misty.Speak(text = "Oh its a cup.. i think.", pitch = 2)    
                 return True  # Object detected that requires moving around
     return False
 
 def handle_time_of_flight(event_data):
-    global picture_taken, moving_around
+    global picture_taken, moving_around, stop_misty_movement
     distance = event_data['message']['distanceInMeters']
     sensor_id = event_data['message']['sensorId']
-    
     # Set a threshold distance (in meters)
     threshold_distance = 0.3
 
@@ -73,6 +89,7 @@ def handle_time_of_flight(event_data):
         misty.Stop()
         misty.MoveHead(30, 0, 0, 100)
         picture_taken = True
+        stop_misty_movement = True  # Signal the move_misty thread to stop
         print(f"Sensor: {sensor_id}, Distance: {distance} meters")
 
         # Take a picture with Misty
@@ -80,57 +97,57 @@ def handle_time_of_flight(event_data):
         if detect_object(results):
             move_around()
 
+# This is Misty initially moving
 def move_misty():
+    global stop_misty_movement
     misty.MoveArms(50, 50)
     time.sleep(1)
     misty.DriveTime(25, 0, 2000)
     for i in range(2):
+        if stop_misty_movement:
+            break  # Stop moving if the flag is set
         misty.MoveArms(50, -50)
         time.sleep(1)
         misty.MoveArms(-50, 50)
         time.sleep(1)
         misty.MoveArms(50, 50)
 
+# Misty moves around the object
 def move_around():
     global picture_taken, moving_around
     if moving_around:
         return
     moving_around = True
-    
+    # Misty turns right
     misty.DriveTime(linearVelocity=40, angularVelocity=-100, timeMs=4000, degree=90)
     time.sleep(3)
-    misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1500)
+    # Misty drives forward
+    misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1700)
     time.sleep(3)
+    # Misty turns left
     misty.DriveTime(linearVelocity=20, angularVelocity=100, timeMs=4000, degree=90)
     time.sleep(3)
-    misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1000)
+    # Misty moves forward
+    misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=900)
     time.sleep(1)
+    # Misty moves head to left
     misty.MoveHead(30, 0, 80, 100)
     time.sleep(1)
     results = take_image()
     detect_object(results)  # Only detect object but do not move again
     
     time.sleep(2)
-    misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1000)
-    time.sleep(3)
-    misty.DriveTime(linearVelocity=15, angularVelocity=100, timeMs=3000, degree=90)
-    time.sleep(3)
+    # Misty moves forward
     misty.DriveTime(linearVelocity=50, angularVelocity=0, timeMs=1500)
-    time.sleep(1)
+    time.sleep(3)
+    # Misty turns left
+    misty.DriveTime(linearVelocity=40, angularVelocity=100, timeMs=5000, degree=90)
+    time.sleep(3)
+    # Misty moves forward
+    misty.DriveTime(25, 0, 2000)
+    time.sleep(2)
     results = take_image()
     detect_object(results)
-
-    # moving_around = False
-    # picture_taken = False
-
-    
-    # misty.Speak(confidence)
-    # if confidence < 0.6:
-    #     misty.Speak("I don't know this object")
-    # else:
-    #     misty.Speak(f'I know this object its a {label}')
-
-
 
 if __name__ == "__main__":
     misty = Robot('192.168.0.41')
@@ -146,4 +163,4 @@ if __name__ == "__main__":
 
     # Keep the script running
     while move_thread.is_alive():
-        time.sleep(1)
+        move_thread.join(1)  # Wait for the thread to finish, but allow interruptions
