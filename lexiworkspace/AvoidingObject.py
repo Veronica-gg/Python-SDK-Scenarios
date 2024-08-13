@@ -63,17 +63,17 @@ def detect_object(results):
 
             if picture_count == 1:
                 if confidence < 0.65:
-                    misty.Speak("Woah! What is that?")
+                    misty.Speak(text = "Woah! What is that?", pitch = 2)
                     return True
             elif picture_count == 2:
                 if confidence < 0.65:
-                    misty.Speak("I still don't know what this is.")
+                    misty.Speak(text = "I still don't know what this is.", pitch = 1)
                     return True
             elif picture_count == 3:
-                if confidence >= 0.55:
-                    misty.Speak("Oh, it's a cup!")
+                if confidence >= 0.65:
+                    misty.Speak("Oh, it's a cup")
                 else:
-                    misty.Speak("It's a foreign object.")    
+                    misty.Speak(text = "Oh its a cup.. i think.", pitch = 2)    
                 return True  # Object detected that requires moving around
     return False
 
@@ -81,7 +81,6 @@ def handle_time_of_flight(event_data):
     global picture_taken, moving_around, stop_misty_movement
     distance = event_data['message']['distanceInMeters']
     sensor_id = event_data['message']['sensorId']
-    
     # Set a threshold distance (in meters)
     threshold_distance = 0.3
 
@@ -151,7 +150,7 @@ def move_around():
     detect_object(results)
 
 if __name__ == "__main__":
-    misty = Robot('192.168.0.47')
+    misty = Robot('192.168.0.41')
     misty.ChangeLED(255, 255, 255)
     misty.DisplayImage("e_Admiration.jpg")
     # Misty's head goes to a default
